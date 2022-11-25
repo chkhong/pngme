@@ -3,54 +3,32 @@ use std::{str::FromStr, fmt::Display};
 use crate::{Error, Result};
 
 
-#[derive(Debug, PartialEq, Eq)]
-struct ChunkType {
-    chunk: [char; 4]
-}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChunkType(u8, u8, u8, u8);
 
 impl ChunkType {
-    fn bytes(&self) -> [u8; 4] {
-        self.chunk.map(|c| c as u8)
+    pub fn bytes(&self) -> [u8; 4] {
+        [self.0, self.1, self.2, self.3]
     }
 
     fn is_valid(&self) -> bool {
-        match self.chunk[2] {
-            c if c.is_ascii_lowercase() => false,
-            c if c.is_ascii_uppercase() => true,
-            _ => panic!("is_valid encountered fatal error")
-        }
+        self.2.is_ascii_uppercase()
     }
 
     fn is_critical(&self) -> bool {
-        match self.chunk[0] {
-            c if c.is_ascii_uppercase() => true,
-            c if c.is_ascii_lowercase() => false,
-            _ => panic!("is_critical encountered fatal error")
-        }
+        self.0.is_ascii_uppercase()
     }
     
     fn is_public(&self) -> bool {
-        match self.chunk[1] {
-            c if c.is_ascii_uppercase() => true,
-            c if c.is_ascii_lowercase() => false,
-            _ => panic!("is_public encountered fatal error")
-        }
+        self.1.is_ascii_uppercase()
     }
     
     fn is_reserved_bit_valid(&self) -> bool {
-        match self.chunk[2] {
-            c if c.is_ascii_uppercase() => true,
-            c if c.is_ascii_lowercase() => false,
-            _ => panic!("is_reserved_bit_valid encountered fatal error")
-        }
+        self.2.is_ascii_uppercase()
     }
     
     fn is_safe_to_copy(&self) -> bool {
-        match self.chunk[3] {
-            c if c.is_ascii_uppercase() => false,
-            c if c.is_ascii_lowercase() => true,
-            _ => panic!("is_safe_to_copy encountered fatal error")
-        }
+        self.3.is_ascii_lowercase()
     }
 
 }
@@ -60,13 +38,13 @@ impl TryFrom<[u8; 4]> for ChunkType {
 
     fn try_from(value: [u8; 4]) -> Result<Self> {
         let mut chunk = [' '; 4];
-        for (i, val) in value.into_iter().enumerate() {
-            match val {
-               val if (val as char).is_ascii_alphabetic() => chunk[i] = val as char,
-               _ => return Err("Invalid input format".into())
+        for val in value {
+            match val.is_ascii_alphabetic() {
+                true => {},
+                false => return Err("Invalid input format".into())
             }
         }
-        Ok(ChunkType { chunk })
+        Ok(ChunkType(value[0], value[1], value[2], value[3]))
     }
 }
 
@@ -74,23 +52,14 @@ impl FromStr for ChunkType {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let mut chunk = [' '; 4];
-        if s.len() > 4 {
-            return Err("Invalid input format".into());
-        }
-        for (i, c) in s.chars().enumerate() {
-            match c {
-               c if c.is_ascii_alphabetic() => chunk[i] = c,
-               _ => return Err("Invalid input format".into())
-            }
-        }
-        Ok(ChunkType { chunk })
+        ChunkType::try_from(<[u8; 4]>::try_from(s.as_bytes()).unwrap())
     }
 }
 
 impl Display for ChunkType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.chunk.iter().collect::<String>())
+        let str = String::from_utf8(self.bytes().to_vec()).unwrap();
+        write!(f, "{}", str)
     }
 }
 
