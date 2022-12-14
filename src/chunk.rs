@@ -35,7 +35,7 @@ impl Chunk {
         &self.chunk_type
     }
 
-    fn data(&self) -> &[u8] {
+    pub fn data(&self) -> &[u8] {
         &self.chunk_data
     }
 
